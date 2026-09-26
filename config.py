@@ -40,6 +40,18 @@ YTDL_FORMAT_OPTIONS = {
     },
 }
 
+import base64
+
+# Automatically write cookies.txt from environment variable if provided
+if os.getenv("YOUTUBE_COOKIES_BASE64"):
+    try:
+        decoded_cookies = base64.b64decode(os.getenv("YOUTUBE_COOKIES_BASE64")).decode('utf-8')
+        with open(COOKIES_FILE, 'w', encoding='utf-8') as cf:
+            cf.write(decoded_cookies)
+        print("Loaded cookies from YOUTUBE_COOKIES_BASE64 variable")
+    except Exception as e:
+        print(f"Failed to decode cookies: {e}")
+
 if os.path.exists(COOKIES_FILE):
     YTDL_FORMAT_OPTIONS["cookiefile"] = COOKIES_FILE
 
