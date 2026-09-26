@@ -182,7 +182,17 @@ class Music(commands.Cog):
 
     async def _play_next(self, guild_id: int, text_channel: discord.TextChannel):
         """Play the next song in queue."""
-        guild = self.bot.get_guild(guild_id)
+        if not hasattr(self, '_play_locks'):
+            self._play_locks = {}
+        import asyncio
+        if guild_id not in self._play_locks:
+            self._play_locks[guild_id] = asyncio.Lock()
+            
+        if self._play_locks[guild_id].locked():
+            return # Already playing next song
+            
+        async with self._play_locks[guild_id]:
+            guild = self.bot.get_guild(guild_id)
         if not guild or not guild.voice_client:
             return
 
