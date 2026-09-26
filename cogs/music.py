@@ -96,6 +96,48 @@ class YTDLSource:
         return None
 
 
+
+class MusicControlView(discord.ui.View):
+    def __init__(self, music_cog, guild_id, text_channel):
+        super().__init__(timeout=None)
+        self.music_cog = music_cog
+        self.guild_id = guild_id
+        self.text_channel = text_channel
+
+    @discord.ui.button(emoji="⏯️", style=discord.ButtonStyle.primary, custom_id="mc_playpause")
+    async def play_pause_button(self, button: discord.ui.Button, interaction: discord.Interaction):
+        guild = self.music_cog.bot.get_guild(self.guild_id)
+        if not guild or not guild.voice_client:
+            return await interaction.response.send_message("Bot không ở trong Voice!", ephemeral=True)
+            
+        if guild.voice_client.is_playing():
+            guild.voice_client.pause()
+            await interaction.response.send_message("⏸️ Đã tạm dừng nhạc.", ephemeral=True)
+        elif guild.voice_client.is_paused():
+            guild.voice_client.resume()
+            await interaction.response.send_message("▶️ Đã tiếp tục phát nhạc.", ephemeral=True)
+        else:
+            await interaction.response.send_message("Không có nhạc nào đang phát.", ephemeral=True)
+
+    @discord.ui.button(emoji="⏭️", style=discord.ButtonStyle.secondary, custom_id="mc_skip")
+    async def skip_button(self, button: discord.ui.Button, interaction: discord.Interaction):
+        guild = self.music_cog.bot.get_guild(self.guild_id)
+        if not guild or not guild.voice_client or (not guild.voice_client.is_playing() and not guild.voice_client.is_paused()):
+            return await interaction.response.send_message("Không có nhạc nào đang phát.", ephemeral=True)
+            
+        guild.voice_client.stop() # This automatically triggers after_playing -> _play_next
+        await interaction.response.send_message("⏭️ Đã chuyển bài!", ephemeral=True)
+        
+    @discord.ui.button(emoji="⏹️", style=discord.ButtonStyle.danger, custom_id="mc_stop")
+    async def stop_button(self, button: discord.ui.Button, interaction: discord.Interaction):
+        guild = self.music_cog.bot.get_guild(self.guild_id)
+        if not guild or not guild.voice_client:
+            return await interaction.response.send_message("Bot không ở trong Voice!", ephemeral=True)
+            
+        self.music_cog.get_queue(self.guild_id).clear()
+        guild.voice_client.stop()
+        await interaction.response.send_message("⏹️ Đã dừng phát nhạc và xoá danh sách.", ephemeral=True)
+
 class Music(commands.Cog):
     """Music commands for the bot."""
 
@@ -222,8 +264,9 @@ class Music(commands.Cog):
 
             # Send now playing embed
             embed = self._make_now_playing_embed(song, queue)
+            view = MusicControlView(self, guild_id, text_channel)
             try:
-                msg = await text_channel.send(embed=embed)
+                msg = await text_channel.send(embed=embed, view=view)
                 self.now_playing_messages[guild_id] = msg
             except Exception:
                 pass
@@ -409,7 +452,8 @@ class Music(commands.Cog):
                 print(f"[PLAY] 8. Playback started, sending Now Playing embed...")
 
                 embed = self._make_now_playing_embed(song, queue)
-                await ctx.followup.send(embed=embed)
+                view = MusicControlView(self, ctx.guild.id, ctx.channel)
+                await ctx.followup.send(embed=embed, view=view)
                 print(f"[PLAY] 9. Embed sent successfully!")
 
                 # If original URL had playlist params, load the rest in background
@@ -528,7 +572,8 @@ class Music(commands.Cog):
 
                         vc.play(source, after=after_playing)
                         embed = self._make_now_playing_embed(song, queue)
-                        await ctx.channel.send(embed=embed)
+                        view = MusicControlView(self, ctx.guild.id, ctx.channel)
+                        await ctx.channel.send(embed=embed, view=view)
                     else:
                         queue.add(song)
                         embed = self._make_embed(
@@ -645,7 +690,8 @@ class Music(commands.Cog):
             return
 
         embed = self._make_now_playing_embed(queue.current, queue)
-        await ctx.respond(embed=embed)
+        view = MusicControlView(self, ctx.guild.id, ctx.channel)
+        await ctx.respond(embed=embed, view=view)
 
     @discord.slash_command(name="volume", description="Set the volume (0-100)")
     async def volume(
