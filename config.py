@@ -33,11 +33,8 @@ YTDL_FORMAT_OPTIONS = {
     "geo_bypass": True,
     "js_runtimes": {"ejs": {}, "deno": {}, "nodejs": {}},
     "nocheckcertificate": True,
-    "extractor_args": {
-        "youtube": {
-            "player_client": ["ios", "android"],
-        }
-    },
+    # Removed player_client bypass since we now use cookies
+    "extractor_args": {},
 }
 
 import base64
