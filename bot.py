@@ -4,7 +4,6 @@ A feature-rich music bot for Discord with YouTube support.
 """
 
 import traceback
-from keep_alive import keep_alive
 import discord
 from discord.ext import commands
 
@@ -157,5 +156,4 @@ if __name__ == "__main__":
         print("=" * 50)
         exit(1)
 
-        keep_alive()
-bot.run(DISCORD_TOKEN)
+    bot.run(DISCORD_TOKEN)
