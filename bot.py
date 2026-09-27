@@ -4,7 +4,6 @@ A feature-rich music bot for Discord with YouTube support.
 """
 
 import traceback
-from keep_alive import keep_alive
 import discord
 from discord.ext import commands
 
