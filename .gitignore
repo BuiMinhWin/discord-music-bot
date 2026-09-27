@@ -3,3 +3,6 @@ __pycache__/
 .env
 cookies.txt
 *.pyc
+start_bot.bat
+start_bot_silent.vbs
+cookies_base64.txt

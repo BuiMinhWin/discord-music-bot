@@ -15,6 +15,7 @@ from config import (
     INACTIVITY_TIMEOUT, GENIUS_API_TOKEN,
 )
 from utils.lyrics import fetch_lyrics
+from utils.piped import piped
 from utils.music_queue import LoopMode, MusicQueue, Song
 
 
@@ -54,6 +55,14 @@ class YTDLSource:
                 functools.partial(cls.ytdl.extract_info, query, download=False)
             )
         except Exception as e:
+            error_msg = str(e).lower()
+            yt_blocked = any(kw in error_msg for kw in [
+                "sign in", "not a bot", "page needs to be reloaded",
+                "requested format", "confirm your age", "bot detection",
+            ])
+            if yt_blocked:
+                print(f"[YTDL] YouTube blocked, falling back to Piped...")
+                return await cls._piped_fallback(query, is_url, loop)
             raise Exception(f"Could not extract info: {str(e)}")
 
         if not data:
@@ -77,7 +86,7 @@ class YTDLSource:
 
     @classmethod
     async def get_stream_url(cls, url: str, *, loop=None) -> Optional[dict]:
-        """Re-extract stream URL (they expire)."""
+        """Re-extract stream URL (they expire). Falls back to Piped if blocked."""
         loop = loop or asyncio.get_event_loop()
         try:
             data = await loop.run_in_executor(
@@ -91,8 +100,17 @@ class YTDLSource:
                     "duration": data.get("duration", 0) or 0,
                     "thumbnail": data.get("thumbnail", ""),
                 }
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[YTDL] Re-extract failed: {e}, trying Piped...")
+
+        # Fallback to Piped
+        try:
+            result = await piped.get_stream_from_url(url)
+            if result:
+                print(f"[PIPED] Re-extracted stream successfully")
+                return result
+        except Exception as e:
+            print(f"[PIPED] Re-extract also failed: {e}")
         return None
 
 
